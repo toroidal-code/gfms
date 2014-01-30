@@ -21,7 +21,7 @@
     },
     "dependencies": {
         "express": "*",
-        "github-flavored-markdown": "*",
+        "marked": "latest",
         "jade": "*",
         "laeh2": "*",
         "nib": "*",
