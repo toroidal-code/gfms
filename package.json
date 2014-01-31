@@ -22,6 +22,7 @@
     "dependencies": {
         "express": "*",
         "marked": "latest",
+        "highlight.js": "latest",
         "jade": "*",
         "laeh2": "*",
         "nib": "*",

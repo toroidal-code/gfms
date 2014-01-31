@@ -10,6 +10,7 @@ var app = express();
 var http = require('http');
 var server = http.createServer(app);
 var marked = require('marked');
+var highlight = require('highlight.js');
 var _ = require('underscore');
 var fs = require('fs');
 var ews = require('ws');
@@ -260,7 +261,14 @@ function renderWithMarked(contents, cb) { // cb(err, res)
     marked.setOptions({
       gfm: true,
       tables: true,
-      smartLists: true
+      smartLists: true,
+      highlight: function (code, lang) {
+        if (lang) {
+            return highlight.highlight(lang, code, true).value;
+        } else {
+            return highlight.highlightAuto(code).value;
+        }
+      }
     });
 
     var html = marked(contents);
