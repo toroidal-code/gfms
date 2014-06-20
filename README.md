@@ -2,25 +2,26 @@
 
 ### News
 
-Changed Showdown to [Marked](https://github.com/chjj/marked), as it can parse gfm markdown very well, and added [Highlight](http://highlightjs.org/) to use syntax highlight ou source codes. You can even direct link to source code files (just Javascript, PHP, Python and SQL, for now).
-
-You can now use the option `-a` to tell GFMS to render your documents via the [Github Markdown Rendering API](http://developer.github.com/v3/markdown/). For simplicity, the public access is used, which is limited to 60 requests per hour per an IP address.
-
-If the mode `-a` is not specified, GFMS will render your doc via Github API only when you manually reload it in the browser (and on the first load). This way you are less likely ot hit the hourly API limit, because you will only use the API to check for correctness occasionally. Use `-n` to disable this feature.
-
-### (based on Node.js, Express.js, Jade, Stylus, ws-rpc and Marked)
+* All rendering is done offline by [Marked](https://github.com/chjj/marked), which is great GFM markdown parser
+* Uses [Highlight](http://highlightjs.org/) to use syntax highlight of source codes. 
+  * You can even direct link to source code files (just Javascript, PHP, Python and SQL, for now).
+* Removed WS-RPC dependencies, file monitoring and auto-rendering changed files
+* Introduced *Export to _PDF_* feature using [PhantomJS](http://phantomjs.org/)
 
 ## Usage
 
-    [sudo] npm install gfms -g
-    cd your-github-project-dir
-    gfms -p 1234
-
-(If you don't know how to install NPM, see here: http://npmjs.org/)
-
+```bash
+git clone https://github.com/pawel-wiejacha/gfms.git
+cd gfms
+npm install
+cd your-github-project-dir
+gfms-dir/bin/gfms -p 1234
+```
 Now browse to `http://localhost:1234`, and select the `.md` or `.markdown` file to view.
 
-When you save the source Markdown file in your editor, it will be automatically updated in your browser. So perhaps a good setup is to have both your editor window and your browser window visible at the same time, so that you don't have to switch in between.
+**To get nice PDF just append `?pdf` suffix to to document URL (for example `http://localhost:1234/Readme.md?pdf`)**
+
+(If you don't know how to install NPM, see here: http://npmjs.org/)
 
 ## License
 (The MIT License)
