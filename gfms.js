@@ -4,8 +4,6 @@ var _e = laeh._e;
 var _x = laeh._x;
 
 var express = require('express');
-var stylus = require('stylus');
-var nib = require('nib');
 var app = express();
 var http = require('http');
 var server = http.createServer(app);
@@ -13,13 +11,13 @@ var marked = require('marked');
 var highlight = require('highlight.js');
 var _ = require('underscore');
 var fs = require('fs');
-var ews = require('ws');
-var ws = require('ws-rpc').extend(ews);
-var wss = new ws.Server({ server: server });
 var utilz = require('utilz');
 var optimist = require('optimist');
+var tmp = require('temporary');
 
-var watched = {};
+var phantom_sync = require('phantom-sync')
+var phantom = phantom_sync.phantom
+var sync = phantom_sync.sync
 
 var pkgJson = require('./package.json');
 
@@ -38,31 +36,14 @@ var argv = optimist
     .describe('proxy', 'if behind a proxy, proxy url.')
     .argv;
 
+var rootUrl = 'http://' + argv.h + ':' + argv.p + '/'
+
 var pub = __dirname + '/public';
 var views = __dirname + '/views';
 app.set('views', views);
 app.set('view engine', 'jade');
 app.set('view options', { layout: false });
 
-
-if(process.env.NODE_ENV === 'development') {
-    // only use Stylus in development, because when gfms is installed
-    // globally with sudo, and then run by an user, it cannot create
-    // the generate .css files (and I'm too tired to look for a solution now).
-    app.use(stylus.middleware({
-        src: views,
-        dest: pub,
-        compile: function(str, path) {
-            return stylus(str)
-                .set('filename', path)
-                .set('compress', true)
-                .use(nib())
-                .import('nib');
-        }
-    }));
-}
-
-app.use(wss.middleware(express));
 app.use(express.static(pub));
 
 
@@ -90,6 +71,35 @@ function is_sourcecode(v) {
 }
 
 app.get('*', function(req, res, next) {
+
+    if ('pdf' in req.query) {
+        var urlToRender = rootUrl + req.path + '?printerFriendly'
+
+        var tmpFileBase = new tmp.File()
+        var tmpFilePdfPath = tmpFileBase + '.pdf'
+
+        sync(function() {
+            var ph = phantom.create()
+            var page = ph.createPage()
+            page.set("paperSize", { format: "A4", orientation: 'portrait', margin: '0.6cm' });
+            page.viewPortSize = { width: 1366, height: 768 };
+            page.open(urlToRender)
+
+            page.render(tmpFilePdfPath)
+
+            var pdfFileContents = fs.readFileSync(tmpFilePdfPath)
+            tmpFileBase.unlink()
+            fs.unlink(tmpFilePdfPath)
+
+            ph.exit();
+            res.send(200, pdfFileContents);
+        })
+
+        res.set('Content-Type', 'application/pdf');
+        return 
+    }
+
+    var styles = ('printerFriendly' in req.query) ? ['print.css'] : []
     
     if(req.path.indexOf('/styles/') === 0) {
         var style = styles[req.path];
@@ -117,7 +127,6 @@ app.get('*', function(req, res, next) {
     }
     
     if(stat.isDirectory()) {
-        
         var files = _.chain(fs.readdirSync(dir)).filter(function(v) {
             var stat = fs.statSync(dir + '/' + v);
             return stat.isDirectory() || (stat.isFile() && (is_markdown(v) || is_image(v)));
@@ -131,108 +140,58 @@ app.get('*', function(req, res, next) {
         res.render('directory', {
             files: files,
             dir: dir,
-            styles: [],
+            styles: styles,
             title: basename(dir)
         });
-    } else if(query.raw === "true") {
-        var content = fs.readFileSync(dir);
-        res.writeHead('200');
-        res.end(content,'binary');
     } else if(is_markdown(dir)) {
-        
-        if(!watched[dir]) {
-            fs.watchFile(dir, { interval: 500 }, function(curr, prev) {
-                if(curr.mtime.getTime() !== prev.mtime.getTime()) {
-
-                    console.log('file ' + dir + ' has changed');
-                    
-                    renderFile(dir, _x(console.log, false, function(err, rendered) {
-                        wss.message('update', { update: dir, content: err || rendered });
-                    }));
-                }
-            });
-            watched[dir] = true;
-        }
-        
         renderFile(dir, _x(next, true, function(err, rendered) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: [],
+                styles: styles,
                 fullname: dir
             });
         }));
-        
     }
     else if(is_image(dir)) {
-
-        if(!watched[dir]) {
-            fs.watchFile(dir, { interval: 500 }, function(curr, prev) {
-                if(curr.mtime.getTime() !== prev.mtime.getTime()) {
-
-                    console.log('file ' + dir + ' has changed');
-
-                    renderImageFile(base, argv.a, _x(console.log, false, function(err, rendered) {
-                        wss.message('update', { update: dir, content: err || rendered });
-                    }));
-                }
-            });
-            watched[dir] = true;
-        }
-
-        renderImageFile(base, argv.a || argv.b, _x(next, true, function(err, rendered) {
+        renderImageFile(base, _x(next, true, function(err, rendered) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: [],
+                styles: styles,
                 fullname: dir
             });
         }));
 
     }
     else if(lang = is_sourcecode(dir)) {
-        if(!watched[dir]) {
-            fs.watchFile(dir, { interval: 500 }, function(curr, prev) {
-                if(curr.mtime.getTime() !== prev.mtime.getTime()) {
-
-                    console.log('file ' + dir + ' has changed');
-                    
-                    renderSourceCode(dir, argv.a, lang, _x(console.log, false, function(err, rendered) {
-                        wss.message('update', { update: dir, content: err || rendered });
-                    }));
-                }
-            });
-            watched[dir] = true;
-        }
-        
-        renderSourceCode(dir, argv.a || argv.b, lang, _x(next, true, function(err, rendered) {
+        renderSourceCode(dir, lang, _x(next, true, function(err, rendered) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: [],
+                styles: styles,
                 fullname: dir
             });
         }));        
     }
+
     else
         return next();
 });
 
 function renderFile(file, cb) { // cb(err, res)
     var contents = fs.readFileSync(file, 'utf8');
-    var func = renderWithMarked;
-    func(contents, _x(cb, true, cb));
+    renderWithMarked(contents, _x(cb, true, cb));
 }
 
-function renderImageFile(file, api, cb) { // cb(err, res)
+function renderImageFile(file, cb) { // cb(err, res)
     var html = '<div class="image js-image"><span class="border-wrap"><img src="' + file + '?raw=true"></span></div>';
     cb(null, html);
 }
 
-function renderSourceCode(file, api, lang, cb) { // cb(err, res)
+function renderSourceCode(file, lang, cb) { // cb(err, res)
     var contents = "```" + lang + "\n" + fs.readFileSync(file, 'utf8') + "\n```";
-    var func = api ? renderWithGithub : renderWithMarked;
-    func(contents, _x(cb, true, cb));
+    renderWithMarked(contents, _x(cb, true, cb));
 }
 
 function renderWithMarked(contents, cb) { // cb(err, res)
@@ -245,12 +204,13 @@ function renderWithMarked(contents, cb) { // cb(err, res)
         if (lang) {
             return highlight.highlight(lang, code, true).value;
         } else {
-            return highlight.highlightAuto(code).value;
+            code
         }
       }
     });
 
     var html = marked(contents);
+
     cb(null, html);
 }
 
@@ -262,5 +222,5 @@ process.on('SIGINT', function() {
 
 _x(cb, false, function() {
         server.listen(argv.p, argv.h);
-        console.log('GFMS ' + pkgJson.version + ' serving ' + process.cwd() + ' at http://' + argv.h + ':' + argv.p + '/ - press CTRL+C to exit.');
+        console.log('GFMS ' + pkgJson.version + ' serving ' + process.cwd() + ' at ' + rootUrl + ' - press CTRL+C to exit.');
 })();
