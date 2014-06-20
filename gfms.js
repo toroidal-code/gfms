@@ -99,7 +99,7 @@ app.get('*', function(req, res, next) {
         return 
     }
 
-    var styles = ('printerFriendly' in req.query) ? ['print.css'] : []
+    var styles = ('printerFriendly' in req.query) ? ['/print.css'] : []
     
     if(req.path.indexOf('/styles/') === 0) {
         var style = styles[req.path];
@@ -127,22 +127,7 @@ app.get('*', function(req, res, next) {
     }
     
     if(stat.isDirectory()) {
-        var files = _.chain(fs.readdirSync(dir)).filter(function(v) {
-            var stat = fs.statSync(dir + '/' + v);
-            return stat.isDirectory() || (stat.isFile() && (is_markdown(v) || is_image(v)));
-        }).map(function(v) {
-            return {
-                url: base + '/' + v,
-                name: v
-            };
-        }).value();
-        
-        res.render('directory', {
-            files: files,
-            dir: dir,
-            styles: styles,
-            title: basename(dir)
-        });
+        renderDir(base, dir, styles, res)
     } else if(is_markdown(dir)) {
         renderFile(dir, _x(next, true, function(err, rendered) {
             res.render('file', {
@@ -178,6 +163,40 @@ app.get('*', function(req, res, next) {
     else
         return next();
 });
+
+function renderDir(base, dir, styles, res) {
+    // stat
+    var files = _.chain(fs.readdirSync(dir)).map(function(v) { 
+        return { name: v, stat: fs.statSync(dir + '/' + v) }
+    })
+
+    // show only docs
+    files = files.filter(function(fileDesc) {
+        return fileDesc.stat.isDirectory() || (fileDesc.stat.isFile() && (is_markdown(fileDesc.name) || is_image(fileDesc.name)));
+    })
+
+    // sort
+    files = files.sortBy(function(entry) { return !entry.stat.isDirectory() })
+
+    // prepare file list for jade template
+    files = files.map(function(fileDesc) {
+        return {
+            url: base + '/' + fileDesc.name,
+            name: fileDesc.name,
+            type: fileDesc.stat.isDirectory() ? 'directory' : 'text'
+        };
+    })
+
+    files = files.value();
+   
+    res.render('directory', {
+        files: files,
+        dir: dir,
+        baseDir: base ? base : '/',
+        styles: styles,
+        title: basename(dir)
+    });
+}
 
 function renderFile(file, cb) { // cb(err, res)
     var contents = fs.readFileSync(file, 'utf8');

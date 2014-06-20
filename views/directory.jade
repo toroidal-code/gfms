@@ -1,7 +1,12 @@
 extends layout
 
 block content
-    #content
-        each file in files
-            div
-                a(href=file.url) #{file.name}
+    h1 #{baseDir}
+    #directory-listing
+        table.files
+            each file in files
+                tr
+                    td.icon
+                        span(class="octicon octicon-file-#{file.type}")
+                    td 
+                        a(href=file.url) #{file.name}
