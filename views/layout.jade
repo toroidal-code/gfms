@@ -2,10 +2,10 @@ doctype html
 html
     head
         title #{title} - Github Flavored Markdown Server
-        each style in styles
-            link(href=style, rel='stylesheet', type='text/css')
+        link(rel='stylesheet', href='/github1.css')
+        link(rel='stylesheet', href='/github2.css')
+        link(rel='stylesheet', href='/highlightjs-default.css')
         link(rel='stylesheet', href='/style.css')
-        link(rel='stylesheet', href='/highlight_default.css')
         script(src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js')
         script(src='/ws-rpc-client.min.js')
         script(src='/gfms.js')
