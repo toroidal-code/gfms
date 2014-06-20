@@ -16,17 +16,10 @@ var fs = require('fs');
 var ews = require('ws');
 var ws = require('ws-rpc').extend(ews);
 var wss = new ws.Server({ server: server });
-var request = require('request');
-var async = require('async-mini');
 var utilz = require('utilz');
 var optimist = require('optimist');
 
 var watched = {};
-var styles = {};
-var cssUpdateInterval = 1000 * 60 * 60 * 24;
-var cssCheckInterval = 1000 * 60 * 5;
-var lastCssUpdate = 0;
-var updatingCss;
 
 var pkgJson = require('./package.json');
 
@@ -43,12 +36,6 @@ var argv = optimist
     .describe('h', 'Host address to bind to.')
     .default('h', 'localhost')
     .describe('proxy', 'if behind a proxy, proxy url.')
-    .boolean('a')
-    .describe('a', 'Render using Github API.')
-    .alias('a', 'api')
-    .boolean('n')
-    .describe('n', 'Disable usage of Github API when the doc is manually reloaded.')
-    .alias('n', 'no-api-on-reload')
     .argv;
 
 var pub = __dirname + '/public';
@@ -144,7 +131,7 @@ app.get('*', function(req, res, next) {
         res.render('directory', {
             files: files,
             dir: dir,
-            styles: Object.keys(styles),
+            styles: [],
             title: basename(dir)
         });
     } else if(query.raw === "true") {
@@ -159,7 +146,7 @@ app.get('*', function(req, res, next) {
 
                     console.log('file ' + dir + ' has changed');
                     
-                    renderFile(dir, argv.a, _x(console.log, false, function(err, rendered) {
+                    renderFile(dir, _x(console.log, false, function(err, rendered) {
                         wss.message('update', { update: dir, content: err || rendered });
                     }));
                 }
@@ -167,11 +154,11 @@ app.get('*', function(req, res, next) {
             watched[dir] = true;
         }
         
-        renderFile(dir, argv.a || argv.b, _x(next, true, function(err, rendered) {
+        renderFile(dir, _x(next, true, function(err, rendered) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: Object.keys(styles),
+                styles: [],
                 fullname: dir
             });
         }));
@@ -197,7 +184,7 @@ app.get('*', function(req, res, next) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: Object.keys(styles),
+                styles: [],
                 fullname: dir
             });
         }));
@@ -222,7 +209,7 @@ app.get('*', function(req, res, next) {
             res.render('file', {
                 file: rendered,
                 title: basename(dir),
-                styles: Object.keys(styles),
+                styles: [],
                 fullname: dir
             });
         }));        
@@ -231,9 +218,9 @@ app.get('*', function(req, res, next) {
         return next();
 });
 
-function renderFile(file, api, cb) { // cb(err, res)
+function renderFile(file, cb) { // cb(err, res)
     var contents = fs.readFileSync(file, 'utf8');
-    var func = api ? renderWithGithub : renderWithMarked;
+    var func = renderWithMarked;
     func(contents, _x(cb, true, cb));
 }
 
@@ -267,148 +254,13 @@ function renderWithMarked(contents, cb) { // cb(err, res)
     cb(null, html);
 }
 
-function renderWithGithub(contents, cb) { // cb(err, res)
-    var opts = {
-        method: 'post',
-        url: 'https://api.github.com/markdown',
-        json: {
-            text: contents,
-            mode: 'markdown'
-        },
-        headers: {
-          'User-Agent': 'gfms/' + pkgJson.version + ' https://github.com/ypocat/gfms'
-        },
-        encoding: 'utf8'
-    };
-
-    if(argv.proxy && argv.proxy.length > 0) {
-        opts.proxy = argv.proxy;
-    }
-
-    request(opts, _x(cb, true, function(err, res, body) {
-        console.log('remaining API requests: %d', res.headers['x-ratelimit-remaining']);
-        cb(null, body);
-    }));
-}
-
 process.on('SIGINT', function() {
     console.log('\nGFMS exit.');
     return process.exit();
 });
 
-function loadStyle(style, cb) {
-    
-    request(style, _x(cb, true, function(err, res, body) {
-        
-        if(res.statusCode != 200)
-            throw 'Cannot load stylesheet: ' + style;
-        
-        cb(null, body);
-    }));
-}
-
-function getStylesheetBaseName(url) {
-    
-    var m = /\/([^\/]+)$/.exec(url);
-    
-    if(!m)
-        _e('unexpected stylesheet url: ' + url);
-        
-    return m[1];
-}
-
-function loadStyles(_cb) {
-    
-    if(updatingCss)
-        return;
-    updatingCss = true;
-    
-    function cb(err) {
-        updatingCss = false;
-        _cb(err);
-    }
-    
-    _x(cb, false, function() {
-    
-        console.log('Loading Github CSS...');
-
-        var opts = {url:'http://www.github.com'};
-        if(argv.proxy && argv.proxy.length > 0) {
-            opts.proxy = argv.proxy;
-        }
-        request(opts, _x(cb, true, function(err, res, body) {
-        
-            if(res.statusCode != 200)
-                throw 'Cannot load .css links from Github';
-
-            var ff = {};
-            var m;
-            var re = /href="([^"]+?\/assets\/[^"]+?\.css)"/g;
-         
-            while(m = re.exec(body)) {
-            
-                (function(url) {
-                    
-                    var base = '/styles/' + getStylesheetBaseName(url);
-                    
-                    ff[base] = _x(null, false, function(cb) {
-                        var opts = {url:url};
-                        if(argv.proxy && argv.proxy.length > 0) {
-                            opts.proxy = argv.proxy;
-                        }
-                        loadStyle(opts, cb);
-                    });
-                    
-                })(m[1]);
-            }
-        
-            async.parallel(ff, _x(cb, true, function(err, res) {
-                styles = res;
-                cb();
-            }));
-        
-        }));
-        
-    })();
-}
-
-function startCssUpdater(interval) {
-    
-    console.log('Auto-updating CSS every ' + utilz.timeSpan(interval) + '.');
-    
-    setInterval(_x(cb, false, function() {
-        
-        if(Date.now() - lastCssUpdate > interval) {
-            
-            loadStyles(_x(cb, true, function() {
-            
-                lastCssUpdate = Date.now();
-            
-                cb(null, 'Auto-updated CSS.');
-            }));
-        }
-        
-    }), cssCheckInterval);
-}
-
-if(!argv.a && !argv.n)
-    argv.b = true;
 
 _x(cb, false, function() {
-    loadStyles(_x(cb, true, function() {
-    
-        if(!Object.keys(styles).length)
-            _e('Cannot parse .css links from Github');
-        
-        if(argv.a)
-            console.log('Using Github API to render markdown for all updates.');
-        else if(argv.b)
-            console.log('Using Github API to render markdown for manual reload updates.');
-    
         server.listen(argv.p, argv.h);
         console.log('GFMS ' + pkgJson.version + ' serving ' + process.cwd() + ' at http://' + argv.h + ':' + argv.p + '/ - press CTRL+C to exit.');
-    
-        lastCssUpdate = Date.now();
-        startCssUpdater(cssUpdateInterval);
-    }));
 })();
