@@ -1,6 +1,7 @@
 # Github Flavored Markdown Server (GFMS)
 
 Simple HTTP server that allows to browse project documentation written in Markdown markup.
+
 **No configuration required.**
 
 ## News
