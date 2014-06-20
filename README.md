@@ -1,12 +1,15 @@
 # Github Flavored Markdown Server (GFMS)
 
-### News
+Simple HTTP server that allows to browse project documentation written in Markdown markup.
+**No configuration required.**
 
-* All rendering is done offline by [Marked](https://github.com/chjj/marked), which is great GFM markdown parser
-* Uses [Highlight](http://highlightjs.org/) to use syntax highlight of source codes. 
+## News
+
+* All rendering is done offline by [Marked](https://github.com/chjj/marked), which is a great GFM markdown parser
+* Uses [Highlight](http://highlightjs.org/) for syntax highlight of source codes. 
   * You can even direct link to source code files (just Javascript, PHP, Python and SQL, for now).
+* Introduced **Export to PDF** feature using [PhantomJS](http://phantomjs.org/)
 * Removed WS-RPC dependencies, file monitoring and auto-rendering changed files
-* Introduced *Export to _PDF_* feature using [PhantomJS](http://phantomjs.org/)
 
 ## Usage
 
@@ -24,9 +27,13 @@ Now browse to `http://localhost:1234`, and select the `.md` or `.markdown` file 
 (If you don't know how to install NPM, see here: http://npmjs.org/)
 
 ## License
+
 (The MIT License)
 
-Copyright (c) 2012 Juraj Vitko (http://ypocat.com)
+Copyright (c):
+2012 Juraj Vitko (http://ypocat.com), 
+2014 Paulo Diovani Gonçalves 
+2014 Paweł Wiejacha (http://www.30pull-ups.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
