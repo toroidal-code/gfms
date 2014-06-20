@@ -51,42 +51,33 @@ var argv = optimist
     .alias('n', 'no-api-on-reload')
     .argv;
 
-app.configure(function() {
-
-    var pub = __dirname + '/public';
-    var views = __dirname + '/views';
-    app.set('views', views);
-    app.set('view engine', 'jade');
-    app.set('view options', { layout: false });
+var pub = __dirname + '/public';
+var views = __dirname + '/views';
+app.set('views', views);
+app.set('view engine', 'jade');
+app.set('view options', { layout: false });
 
 
-    if(process.env.NODE_ENV === 'development') {
-        // only use Stylus in development, because when gfms is installed
-        // globally with sudo, and then run by an user, it cannot create
-        // the generate .css files (and I'm too tired to look for a solution now).
-        app.use(stylus.middleware({
-            src: views,
-            dest: pub,
-            compile: function(str, path) {
-                return stylus(str)
-                    .set('filename', path)
-                    .set('compress', true)
-                    .use(nib())
-                    .import('nib');
-            }
-        }));
-    }
+if(process.env.NODE_ENV === 'development') {
+    // only use Stylus in development, because when gfms is installed
+    // globally with sudo, and then run by an user, it cannot create
+    // the generate .css files (and I'm too tired to look for a solution now).
+    app.use(stylus.middleware({
+        src: views,
+        dest: pub,
+        compile: function(str, path) {
+            return stylus(str)
+                .set('filename', path)
+                .set('compress', true)
+                .use(nib())
+                .import('nib');
+        }
+    }));
+}
 
-    app.use(wss.middleware(express));
-    app.use(express.favicon());
-    app.use(app.router);
-    app.use(express.static(pub));
-    app.use(express.errorHandler({ dump: true, stack: true }));
-});
+app.use(wss.middleware(express));
+app.use(express.static(pub));
 
-app.configure('development', function() {
-    utilz.watchFile(__filename);
-});
 
 function basename(fn) {
     var m = fn.match(/.*?([^\/]+)\/?$/);
