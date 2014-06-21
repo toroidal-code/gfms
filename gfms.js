@@ -188,6 +188,14 @@ function renderDir(base, dir, styles, res) {
     })
 
     files = files.value();
+    // add parent directory
+    if (base.length > '/'.length) {
+        files.unshift({
+            url: base.slice(0, base.lastIndexOf('/')) || '/',
+            name: '..',
+            type: 'directory'
+        })
+    }
    
     res.render('directory', {
         files: files,
