@@ -57,7 +57,7 @@ function is_markdown(v) {
 }
 
 function is_image(v) {
-    return v.match(/.*?(?:\.png|\.jpg|\.gif|\.svg)$/) ? true : false;
+    return v.match(/.*?(?:\.png|\.jpg|\.gif|\.svg\|jpeg)$/) ? true : false;
 }
 
 function is_sourcecode(v) {
@@ -99,9 +99,10 @@ app.get('*', function(req, res, next) {
         return 
     }
 
+
     var styles = ('printerFriendly' in req.query) ? ['/print.css'] : []
     
-    if(req.path.indexOf('/styles/') === 0) {
+    if (req.path.indexOf('/styles/') === 0) {
         var style = styles[req.path];
         if(!style) {
             res.send(404);
@@ -137,6 +138,11 @@ app.get('*', function(req, res, next) {
                 fullname: dir
             });
         }));
+    }
+    else if (query.raw === "true") { // displaying raw content: images, etc.
+        var content = fs.readFileSync(dir);
+        res.writeHead('200');
+        res.end(content,'binary');
     }
     else if(is_image(dir)) {
         renderImageFile(base, _x(next, true, function(err, rendered) {
