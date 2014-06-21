@@ -189,7 +189,7 @@ function renderDir(base, dir, styles, res) {
         return {
             url: base + '/' + fileDesc.name,
             name: fileDesc.name,
-            type: fileDesc.stat.isDirectory() ? 'directory' : 'text'
+            type: fileDesc.stat.isDirectory() ? 'directory' : (is_image(fileDesc.name) ? 'media' : 'text')
         };
     })
 
