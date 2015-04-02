@@ -29,6 +29,7 @@ var argv = optimist
     .usage('\nGithub Flavored Markdown Server.\nRun in your project\'s root directory.\nUsage: $0')
     .demand('p')
     .alias('p', 'port')
+    .default('p', 1234)
     .describe('p', 'Port number to listen at.')
     .alias('h', 'host')
     .describe('h', 'Host address to bind to.')
