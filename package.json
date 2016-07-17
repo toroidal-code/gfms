@@ -29,8 +29,7 @@
         "request": "*",
         "underscore": "*",
         "utilz": "*",
-        "temporary": "*",
-        "phantom-sync": "*"
+        "temporary": "*"
     },
     "devDependencies": {
     },

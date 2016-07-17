@@ -15,10 +15,6 @@ var utilz = require('utilz');
 var optimist = require('optimist');
 var tmp = require('temporary');
 
-var phantom_sync = require('phantom-sync')
-var phantom = phantom_sync.phantom
-var sync = phantom_sync.sync
-
 var pkgJson = require('./package.json');
 
 function cb(err, msg) {
@@ -72,35 +68,6 @@ function is_sourcecode(v) {
 }
 
 app.get('*', function(req, res, next) {
-
-    if ('pdf' in req.query) {
-        var urlToRender = rootUrl + req.path + '?printerFriendly'
-
-        var tmpFileBase = new tmp.File()
-        var tmpFilePdfPath = tmpFileBase + '.pdf'
-
-        sync(function() {
-            var ph = phantom.create()
-            var page = ph.createPage()
-            page.set("paperSize", { format: "A4", orientation: 'portrait', margin: '0.6cm' });
-            page.viewPortSize = { width: 1366, height: 768 };
-            page.open(urlToRender)
-
-            page.render(tmpFilePdfPath)
-
-            var pdfFileContents = fs.readFileSync(tmpFilePdfPath)
-            tmpFileBase.unlink()
-            fs.unlink(tmpFilePdfPath)
-
-            ph.exit();
-            res.send(200, pdfFileContents);
-        })
-
-        res.set('Content-Type', 'application/pdf');
-        return 
-    }
-
-
     var styles = ('printerFriendly' in req.query) ? ['/print.css'] : []
     
     if (req.path.indexOf('/styles/') === 0) {
